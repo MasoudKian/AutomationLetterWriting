@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutomationLetterWriting.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250818032329_InitialDB")]
-    partial class InitialDB
+    [Migration("20250902193021_LeterType_Mig")]
+    partial class LeterType_Mig
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -47,6 +47,9 @@ namespace AutomationLetterWriting.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("JobTitle")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -60,6 +63,13 @@ namespace AutomationLetterWriting.Migrations
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OrganizationEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("OrganizationUnitId")
+                        .HasColumnType("int");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
@@ -89,6 +99,8 @@ namespace AutomationLetterWriting.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("OrganizationUnitId");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -123,6 +135,23 @@ namespace AutomationLetterWriting.Migrations
                     b.ToTable("Attachments");
                 });
 
+            modelBuilder.Entity("AutomationLetterWriting.Models.LetterType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LetterTypes");
+                });
+
             modelBuilder.Entity("AutomationLetterWriting.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -138,6 +167,9 @@ namespace AutomationLetterWriting.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("LetterTypeId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("ParentMessageId")
                         .HasColumnType("int");
 
@@ -151,6 +183,8 @@ namespace AutomationLetterWriting.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LetterTypeId");
 
                     b.HasIndex("ParentMessageId");
 
@@ -187,6 +221,28 @@ namespace AutomationLetterWriting.Migrations
                     b.HasIndex("ReceiverId");
 
                     b.ToTable("MessageRecipients");
+                });
+
+            modelBuilder.Entity("AutomationLetterWriting.Models.OrganizationUnit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("OrganizationUnits");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -322,6 +378,16 @@ namespace AutomationLetterWriting.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AutomationLetterWriting.Models.ApplicationUser", b =>
+                {
+                    b.HasOne("AutomationLetterWriting.Models.OrganizationUnit", "OrganizationUnit")
+                        .WithMany("Users")
+                        .HasForeignKey("OrganizationUnitId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("OrganizationUnit");
+                });
+
             modelBuilder.Entity("AutomationLetterWriting.Models.Attachment", b =>
                 {
                     b.HasOne("AutomationLetterWriting.Models.Message", "Message")
@@ -335,6 +401,10 @@ namespace AutomationLetterWriting.Migrations
 
             modelBuilder.Entity("AutomationLetterWriting.Models.Message", b =>
                 {
+                    b.HasOne("AutomationLetterWriting.Models.LetterType", "LetterType")
+                        .WithMany("Messages")
+                        .HasForeignKey("LetterTypeId");
+
                     b.HasOne("AutomationLetterWriting.Models.Message", "ParentMessage")
                         .WithMany()
                         .HasForeignKey("ParentMessageId");
@@ -344,6 +414,8 @@ namespace AutomationLetterWriting.Migrations
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("LetterType");
 
                     b.Navigation("ParentMessage");
 
@@ -367,6 +439,16 @@ namespace AutomationLetterWriting.Migrations
                     b.Navigation("Message");
 
                     b.Navigation("Receiver");
+                });
+
+            modelBuilder.Entity("AutomationLetterWriting.Models.OrganizationUnit", b =>
+                {
+                    b.HasOne("AutomationLetterWriting.Models.OrganizationUnit", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -427,11 +509,23 @@ namespace AutomationLetterWriting.Migrations
                     b.Navigation("SentMessages");
                 });
 
+            modelBuilder.Entity("AutomationLetterWriting.Models.LetterType", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("AutomationLetterWriting.Models.Message", b =>
                 {
                     b.Navigation("Attachments");
 
                     b.Navigation("Recipients");
+                });
+
+            modelBuilder.Entity("AutomationLetterWriting.Models.OrganizationUnit", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

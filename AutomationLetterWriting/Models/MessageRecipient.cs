@@ -10,7 +10,6 @@
         public string ReceiverId { get; set; }
         public ApplicationUser Receiver { get; set; }
 
-        // وضعیت کاربر نسبت به پیام
         public bool IsRead { get; set; }
         public bool IsDeleted { get; set; }
     }

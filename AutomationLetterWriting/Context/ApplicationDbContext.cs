@@ -15,11 +15,31 @@ namespace AutomationLetterWriting.Context
         public DbSet<Message> Messages { get; set; }
         public DbSet<MessageRecipient> MessageRecipients { get; set; }
         public DbSet<Attachment> Attachments { get; set; }
+        public DbSet<OrganizationUnit> OrganizationUnits { get; set; }
+
+        public DbSet<LetterType> LetterTypes { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<OrganizationUnit>()
+                .HasMany(o => o.Children)
+                .WithOne(o => o.Parent)
+                .HasForeignKey(o => o.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.OrganizationUnit)
+                .WithMany(o => o.Users)
+                .HasForeignKey(u => u.OrganizationUnitId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.OrganizationEmail)
+                .HasMaxLength(256);
 
             // Message
             builder.Entity<Message>(entity =>

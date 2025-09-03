@@ -1,15 +1,10 @@
-﻿namespace AutomationLetterWriting.Models
+﻿namespace AutomationLetterWriting.DTOs
 {
-    public class Attachment
+    public class AttachmentDto
     {
         public int Id { get; set; }
-
         public string FileName { get; set; }
         public string FilePath { get; set; }
         public long FileSize { get; set; }
-
-        // Navigation
-        public int MessageId { get; set; }
-        public Message Message { get; set; }
     }
 }

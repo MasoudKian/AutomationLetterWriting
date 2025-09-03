@@ -4,6 +4,7 @@ using AutomationLetterWriting.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutomationLetterWriting.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250831024736_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -132,23 +135,6 @@ namespace AutomationLetterWriting.Migrations
                     b.ToTable("Attachments");
                 });
 
-            modelBuilder.Entity("AutomationLetterWriting.Models.LetterType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LetterTypes");
-                });
-
             modelBuilder.Entity("AutomationLetterWriting.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -164,9 +150,6 @@ namespace AutomationLetterWriting.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("LetterTypeId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("ParentMessageId")
                         .HasColumnType("int");
 
@@ -180,8 +163,6 @@ namespace AutomationLetterWriting.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("LetterTypeId");
 
                     b.HasIndex("ParentMessageId");
 
@@ -398,10 +379,6 @@ namespace AutomationLetterWriting.Migrations
 
             modelBuilder.Entity("AutomationLetterWriting.Models.Message", b =>
                 {
-                    b.HasOne("AutomationLetterWriting.Models.LetterType", "LetterType")
-                        .WithMany("Messages")
-                        .HasForeignKey("LetterTypeId");
-
                     b.HasOne("AutomationLetterWriting.Models.Message", "ParentMessage")
                         .WithMany()
                         .HasForeignKey("ParentMessageId");
@@ -411,8 +388,6 @@ namespace AutomationLetterWriting.Migrations
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("LetterType");
 
                     b.Navigation("ParentMessage");
 
@@ -504,11 +479,6 @@ namespace AutomationLetterWriting.Migrations
                     b.Navigation("ReceivedMessages");
 
                     b.Navigation("SentMessages");
-                });
-
-            modelBuilder.Entity("AutomationLetterWriting.Models.LetterType", b =>
-                {
-                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("AutomationLetterWriting.Models.Message", b =>
