@@ -220,6 +220,136 @@ namespace AutomationLetterWriting.Controllers
         }
 
 
+        #region Forward , Reply , Attach
+
+        [HttpPost("reply")]
+        public async Task<IActionResult> Reply([FromForm] ReplyMessageDto model)
+        {
+            var sender = await _userManager.GetUserAsync(User);
+            if (sender == null) return Unauthorized();
+
+            var parent = await _context.Messages.FindAsync(model.ParentMessageId);
+            if (parent == null) return NotFound("Parent message not found.");
+
+            var reply = new Message
+            {
+                Subject = "Re: " + parent.Subject,
+                Body = model.Body,
+                CreatedAt = DateTime.UtcNow,
+                SenderId = sender.Id,
+                ParentMessageId = parent.Id,
+                Recipients = new List<MessageRecipient>
+        {
+            new MessageRecipient
+            {
+                ReceiverId = parent.SenderId
+            }
+        },
+                Attachments = new List<Attachment>()
+            };
+
+            _context.Messages.Add(reply);
+            await _context.SaveChangesAsync();
+
+            return Ok("Reply sent successfully");
+        }
+
+        [HttpPost("forward")]
+        public async Task<IActionResult> Forward([FromForm] ForwardMessageDto model)
+        {
+            var sender = await _userManager.GetUserAsync(User);
+            if (sender == null) return Unauthorized();
+
+            var parent = await _context.Messages
+                .Include(m => m.Attachments)
+                .FirstOrDefaultAsync(m => m.Id == model.ParentMessageId);
+
+            if (parent == null) return NotFound("Parent message not found.");
+
+            var forward = new Message
+            {
+                Subject = "Fwd: " + parent.Subject,
+                Body = parent.Body,
+                CreatedAt = DateTime.UtcNow,
+                SenderId = sender.Id,
+                ParentMessageId = parent.Id,
+                Recipients = model.ReceiverIds.Select(r => new MessageRecipient
+                {
+                    ReceiverId = r
+                }).ToList(),
+                Attachments = parent.Attachments.Select(a => new Attachment
+                {
+                    FileName = a.FileName,
+                    FilePath = a.FilePath,
+                    FileSize = a.FileSize
+                }).ToList()
+            };
+
+            _context.Messages.Add(forward);
+            await _context.SaveChangesAsync();
+
+            return Ok("Message forwarded successfully");
+        }
+
+
+
+        #endregion
+
+
+        #region Report
+
+        [HttpPost("report")]
+        public async Task<IActionResult> GetReport([FromBody] MessageReportFilterDto filter)
+        {
+            var query = _context.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.Recipients).ThenInclude(r => r.Receiver)
+                .Include(m => m.LetterType)
+                .AsQueryable();
+
+            // فیلتر شماره نامه
+            if (filter.MessageId.HasValue)
+                query = query.Where(m => m.Id == filter.MessageId.Value);
+
+            // فیلتر موضوع
+            if (!string.IsNullOrEmpty(filter.Subject))
+                query = query.Where(m => m.Subject.Contains(filter.Subject));
+
+            // فیلتر تاریخ
+            if (filter.FromDate.HasValue)
+                query = query.Where(m => m.CreatedAt >= filter.FromDate.Value);
+
+            if (filter.ToDate.HasValue)
+                query = query.Where(m => m.CreatedAt <= filter.ToDate.Value);
+
+            // فیلتر فرستنده
+            if (!string.IsNullOrEmpty(filter.SenderId))
+                query = query.Where(m => m.SenderId == filter.SenderId);
+
+            // فیلتر گیرنده
+            if (!string.IsNullOrEmpty(filter.ReceiverId))
+                query = query.Where(m => m.Recipients.Any(r => r.ReceiverId == filter.ReceiverId));
+
+            var result = await query
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => new MessageReportDto
+                {
+                    Id = m.Id,
+                    Subject = m.Subject,
+                    Body = m.Body,
+                    CreatedAt = m.CreatedAt,
+                    SenderName = m.Sender.DisplayName ?? m.Sender.UserName,
+                    Recipients = m.Recipients.Select(r => r.Receiver.DisplayName ?? r.Receiver.UserName).ToList(),
+                    LetterType = m.LetterType != null ? m.LetterType.Name : null
+                })
+                .ToListAsync();
+
+            return Ok(result);
+        }
+
+
+        #endregion
+
 
     }
 }
